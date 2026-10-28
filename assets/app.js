@@ -76,6 +76,10 @@
       var parts = crumbs ? crumbs.textContent.split('/').map(function (x) { return x.trim(); }).filter(Boolean) : [];
       document.title = parts.concat('SPEEDY CIP').join(' · ');
       window.scrollTo(0, 0);
+      if (!me.teacher) view.querySelectorAll('.stages a.stage').forEach(function (a) {
+        var st = +(a.className.match(/\bs(\d)\b/) || [])[1];
+        if (me.stages.indexOf(st) < 0) { a.classList.add('locked'); a.insertAdjacentHTML('beforeend', '<span class="lock">권한 없음</span>'); }
+      });
       window.cipPlayer.scan();
       return signed(imgs.concat(Object.keys(auds))).then(function () {
         view.querySelectorAll('img[data-img]').forEach(function (i) {
@@ -99,7 +103,7 @@
     var who = document.createElement('div');
     who.className = 'who';
     who.innerHTML = '<span class="nm">' + esc(me.profile && me.profile.name || me.user.email) + '</span>'
-      + (me.admin ? '<a href="#/admin">회원 관리</a>' : '')
+      + (me.teacher ? '<a href="#/admin">회원 관리</a>' : '')
       + '<button type="button" data-act="logout">로그아웃</button>';
     top.appendChild(who);
   }
@@ -169,50 +173,94 @@
     p.finally(function () { btn.disabled = false; });
   }
 
+  function lockedView(st) {
+    window.cipPlayer.reset();
+    view.dataset.path = '';
+    view.innerHTML = bar(st + '단계') + '<div class="gate"><div class="card"><h2>' + st + '단계 열람 권한이 없습니다</h2>'
+      + '<p class="msg">지금 열람할 수 있는 과정: <b>' + me.stages.map(function (n) { return n + '단계'; }).join(', ') + '</b><br>'
+      + st + '단계가 필요하면 담당 선생님께 요청해 주세요.</p>'
+      + '<p class="row"><a class="btn" href="#/">처음으로</a><button class="btn ghost" type="button" data-act="recheck">권한 다시 확인</button></p></div></div>';
+    addUserMenu();
+  }
+
   function pendingView() {
     view.dataset.path = '';
     view.innerHTML = bar() + '<div class="gate"><div class="card"><h2>승인 대기 중입니다</h2>'
       + '<p class="msg"><b>' + esc(me.user.email) + '</b> 계정으로 가입 신청이 접수되었습니다.<br>'
-      + '관리자가 승인하면 교재를 열람할 수 있습니다. 승인 연락을 받으면 ‘승인 확인’을 눌러 주세요.</p>'
+      + '담당 선생님이 볼 수 있는 단계를 열어 주면 교재가 열립니다. 연락을 받으면 ‘승인 확인’을 눌러 주세요.</p>'
       + '<p class="row"><button class="btn" type="button" data-act="recheck">승인 확인</button>'
       + '<button class="btn ghost" type="button" data-act="logout">로그아웃</button></p></div></div>';
   }
 
-  // ---------------------------------------------------------------- 회원 관리 (관리자)
-  var adminFilter = 'wait';
+  // ---------------------------------------------------------------- 회원 관리 (선생님·전체 관리자)
+  // 선생님: 학생마다 1·2·3단계 권한을 켜고 끈다. 전체 관리자: 여기에 더해 선생님 지정·해제.
+  var adminFilter = 'wait', STAGES = [1, 2, 3];
   function adminView() {
     window.cipPlayer.reset();
+    var tabs = [['wait', '승인 대기'], ['ok', '수강생'], ['teacher', '선생님'], ['all', '전체']];
     view.innerHTML = bar('회원 관리') + '<main class="index admin"><div class="card wide"><h2>회원 관리</h2>'
-      + '<div class="tabs"><button type="button" data-filter="wait">승인 대기</button><button type="button" data-filter="ok">승인됨</button>'
-      + '<button type="button" data-filter="all">전체</button></div><div class="list"><p class="msg">불러오는 중…</p></div></div></main>';
+      + '<p class="msg">' + (me.admin ? '전체 관리자' : '선생님') + ' 계정입니다. 학생 줄의 단계 단추를 누르면 그 단계가 열리거나 닫힙니다.'
+      + (me.admin ? ' 선생님은 먼저 회원가입을 한 뒤, 여기서 ‘선생님 지정’을 누르면 됩니다.' : '') + '</p>'
+      + '<div class="tabs">' + tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '">' + t[1] + '</button>'; }).join('')
+      + '</div><div class="list"><p class="msg">불러오는 중…</p></div></div></main>';
     view.dataset.path = 'admin';
     addUserMenu();
     document.title = '회원 관리 · SPEEDY CIP';
     view.querySelectorAll('[data-filter]').forEach(function (b) { b.classList.toggle('on', b.dataset.filter === adminFilter); });
     var q = sb.from('profiles').select('*').order('created_at', { ascending: false });
-    if (adminFilter === 'wait') q = q.eq('approved', false);
-    if (adminFilter === 'ok') q = q.eq('approved', true);
+    if (adminFilter === 'wait') q = q.eq('role', 'student').eq('stages', '{}');
+    if (adminFilter === 'ok') q = q.eq('role', 'student').neq('stages', '{}');
+    if (adminFilter === 'teacher') q = q.eq('role', 'teacher');
     q.then(function (r) {
       var box = view.querySelector('.list');
       if (r.error) { box.innerHTML = '<p class="note err">' + esc(r.error.message) + '</p>'; return; }
-      if (!r.data.length) { box.innerHTML = '<p class="msg">해당하는 회원이 없습니다.</p>'; return; }
-      box.innerHTML = r.data.map(function (p) {
-        var d = new Date(p.created_at).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' });
-        return '<div class="mem' + (p.approved ? ' ok' : '') + '"><div class="info"><b>' + esc(p.name || '(이름 없음)') + '</b>'
-          + '<span>' + esc(p.email) + '</span>' + (p.note ? '<span class="memo">' + esc(p.note) + '</span>' : '')
-          + '<small>가입 ' + d + (p.approved ? ' · 승인됨' : ' · 대기') + '</small></div>'
-          + (p.approved ? '<button class="btn ghost" type="button" data-approve="0" data-id="' + p.id + '">승인 취소</button>'
-            : '<button class="btn" type="button" data-approve="1" data-id="' + p.id + '">승인</button>') + '</div>';
-      }).join('');
+      var rows = r.data.filter(function (p) { return p.id !== me.user.id; });
+      if (!rows.length) { box.innerHTML = '<p class="msg">해당하는 회원이 없습니다.</p>'; return; }
+      box.innerHTML = rows.map(memberRow).join('');
     });
   }
 
-  function setApproved(btn) {
+  function memberRow(p) {
+    var d = new Date(p.created_at).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' });
+    var ctl;
+    if (p.role === 'admin') {
+      ctl = '<span class="badge">전체 관리자</span>';
+    } else if (p.role === 'teacher') {
+      ctl = '<span class="badge">선생님 · 전 단계</span>'
+        + (me.admin ? '<button class="btn ghost sm" type="button" data-role="student" data-id="' + p.id + '">선생님 해제</button>' : '');
+    } else {
+      ctl = '<div class="stg">' + STAGES.map(function (n) {
+        var on = p.stages.indexOf(n) >= 0;
+        return '<button type="button" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '" data-stage="' + n + '" data-id="' + p.id
+          + '" data-cur="' + p.stages.join(',') + '">' + n + '단계</button>';
+      }).join('') + '</div>'
+        + (me.admin ? '<button class="lnk" type="button" data-role="teacher" data-id="' + p.id + '">선생님 지정</button>' : '');
+    }
+    return '<div class="mem"><div class="info"><b>' + esc(p.name || '(이름 없음)') + '</b>'
+      + '<span>' + esc(p.email) + '</span>' + (p.note ? '<span class="memo">' + esc(p.note) + '</span>' : '')
+      + '<small>가입 ' + d + '</small></div><div class="ctl">' + ctl + '</div></div>';
+  }
+
+  // 저장 후 그 줄만 다시 그린다. 지금 탭 조건에서 벗어나면(예: 대기 → 수강생) 흐리게 한 뒤 뺀다.
+  function saveMember(btn, patch, confirmMsg) {
+    if (confirmMsg && !confirm(confirmMsg)) return;
     btn.disabled = true;
-    sb.from('profiles').update({ approved: btn.dataset.approve === '1' }).eq('id', btn.dataset.id).then(function (r) {
-      if (r.error) { alert('바꾸지 못했습니다: ' + r.error.message); btn.disabled = false; return; }
-      adminView();
+    sb.from('profiles').update(patch).eq('id', btn.dataset.id).select().then(function (r) {
+      if (r.error || !r.data.length) { alert('바꾸지 못했습니다' + (r.error ? ': ' + r.error.message : '')); btn.disabled = false; return; }
+      var p = r.data[0], row = btn.closest('.mem');
+      var keep = adminFilter === 'all'
+        || (adminFilter === 'teacher' && p.role === 'teacher')
+        || (adminFilter === 'wait' && p.role === 'student' && !p.stages.length)
+        || (adminFilter === 'ok' && p.role === 'student' && p.stages.length > 0);
+      if (keep) row.outerHTML = memberRow(p);
+      else { row.outerHTML = memberRow(p).replace('class="mem"', 'class="mem moved"'); }
     });
+  }
+
+  function toggleStage(btn) {
+    var cur = btn.dataset.cur ? btn.dataset.cur.split(',').map(Number) : [], n = +btn.dataset.stage;
+    var next = cur.indexOf(n) >= 0 ? cur.filter(function (x) { return x !== n; }) : cur.concat(n);
+    saveMember(btn, { stages: next });
   }
 
   // ---------------------------------------------------------------- 흐름
@@ -221,16 +269,18 @@
       sb.from('profiles').select('*').eq('id', user.id).maybeSingle(),
       sb.rpc('is_admin')
     ]).then(function (r) {
-      me = { user: user, profile: r[0].data, admin: r[1].data === true };
+      var p = r[0].data || {}, admin = r[1].data === true;
+      me = { user: user, profile: p, admin: admin, teacher: admin || p.role === 'teacher', stages: p.stages || [] };
     });
   }
 
   function route() {
     if (!me) return authView();
-    var approved = me.admin || (me.profile && me.profile.approved);
-    if (!approved) return pendingView();
+    if (!me.teacher && !me.stages.length) return pendingView();
     var path = routePath();
-    if (path === 'admin') return me.admin ? adminView() : (location.hash = '#/');
+    if (path === 'admin') return me.teacher ? adminView() : (location.hash = '#/');
+    var st = +(path.match(/^s(\d)\//) || [])[1];
+    if (st && !me.teacher && me.stages.indexOf(st) < 0) return lockedView(st);
     if (view.dataset.path === path && view.querySelector('main')) return;
     showPage(path);
   }
@@ -256,13 +306,16 @@
 
   view.addEventListener('submit', function (ev) { ev.preventDefault(); submit(ev.target); });
   view.addEventListener('click', function (ev) {
-    var t = ev.target.closest('[data-mode],[data-act],[data-filter],[data-approve],a[href]');
+    var t = ev.target.closest('[data-mode],[data-act],[data-filter],[data-stage],[data-role],a[href]');
     if (!t) return;
     if (t.dataset.mode) return authView(t.dataset.mode);
     if (t.dataset.filter) { adminFilter = t.dataset.filter; return adminView(); }
-    if (t.dataset.approve) return setApproved(t);
+    if (t.dataset.stage) return toggleStage(t);
+    if (t.dataset.role) return saveMember(t, { role: t.dataset.role }, t.dataset.role === 'teacher'
+      ? '이 회원을 선생님으로 지정할까요? 모든 단계를 볼 수 있고, 학생에게 단계 권한을 줄 수 있게 됩니다.'
+      : '선생님 권한을 해제할까요? 학생 계정으로 돌아가며, 볼 수 있는 단계는 따로 열어 주어야 합니다.');
     if (t.dataset.act === 'logout') return sb.auth.signOut();
-    if (t.dataset.act === 'recheck') return loadMe(me.user).then(route);
+    if (t.dataset.act === 'recheck') { view.dataset.path = ''; return loadMe(me.user).then(route); }
     var href = t.getAttribute('href');
     if (/^#sec\d+$/.test(href)) {                     // 꼭지 바로가기
       ev.preventDefault();

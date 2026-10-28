@@ -10,6 +10,11 @@
   var me = null;            // { user, profile, admin }
   var pageCache = {}, urlCache = {};
   window.AUDIO_URLS = {};
+  var CAMPUSES = ['종로', '강남'];   // 시작 값. 실제 목록은 campuses 표에서 받아 온다.
+  sb.from('campuses').select('name').order('sort').then(function (r) {
+    if (r.data && r.data.length) CAMPUSES = r.data.map(function (c) { return c.name; });
+  });
+  function campusTxt(cs) { return cs && cs.length ? cs.join(' · ') : '캠퍼스 미지정'; }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -120,7 +125,10 @@
       signup: '<label>이름<input name="name" required maxlength="40" autocomplete="name"></label>'
         + '<label>이메일<input name="email" type="email" autocomplete="email" required></label>'
         + '<label>비밀번호 <small>8자 이상</small><input name="pw" type="password" minlength="8" autocomplete="new-password" required></label>'
-        + '<label>소속·메모 <small>선택 · 승인에 참고합니다</small><input name="note" maxlength="100" placeholder="예: ○○반, 수강생"></label>'
+        + '<fieldset class="pick"><legend>캠퍼스</legend>' + CAMPUSES.map(function (c, i) {
+          return '<label><input type="radio" name="campus" value="' + esc(c) + '" required' + (i ? '' : '') + '><span>' + esc(c) + '</span></label>';
+        }).join('') + '</fieldset>'
+        + '<label>소속·메모 <small>선택 · 승인에 참고합니다</small><input name="note" maxlength="100" placeholder="예: 화목 저녁반"></label>'
         + '<button class="btn" type="submit">가입 신청</button>',
       reset: '<p class="msg">가입한 이메일로 비밀번호 재설정 링크를 보내 드립니다.</p>'
         + '<label>이메일<input name="email" type="email" autocomplete="email" required></label>'
@@ -153,7 +161,7 @@
     } else if (mode === 'signup') {
       p = sb.auth.signUp({
         email: v('email'), password: form.elements.pw.value,
-        options: { emailRedirectTo: here, data: { name: v('name'), note: v('note') } }
+        options: { emailRedirectTo: here, data: { name: v('name'), note: v('note'), campus: (form.querySelector('input[name=campus]:checked') || {}).value } }
       }).then(function (r) {
         if (r.error) return say(/registered|exists/i.test(r.error.message) ? '이미 가입된 이메일입니다. 로그인해 주세요.'
           : /password/i.test(r.error.message) ? '비밀번호가 너무 약합니다. 더 길게 정해 주세요.'
@@ -186,7 +194,7 @@
   function pendingView() {
     view.dataset.path = '';
     view.innerHTML = bar() + '<div class="gate"><div class="card"><h2>승인 대기 중입니다</h2>'
-      + '<p class="msg"><b>' + esc(me.user.email) + '</b> 계정으로 가입 신청이 접수되었습니다.<br>'
+      + '<p class="msg"><b>' + esc(me.user.email) + '</b> 계정으로 <b>' + esc(campusTxt(me.campuses)) + '</b> 캠퍼스에 가입 신청이 접수되었습니다.<br>'
       + '담당 선생님이 볼 수 있는 단계를 열어 주면 교재가 열립니다. 연락을 받으면 ‘승인 확인’을 눌러 주세요.</p>'
       + '<p class="row"><button class="btn" type="button" data-act="recheck">승인 확인</button>'
       + '<button class="btn ghost" type="button" data-act="logout">로그아웃</button></p></div></div>';
@@ -194,13 +202,20 @@
 
   // ---------------------------------------------------------------- 회원 관리 (선생님·전체 관리자)
   // 선생님: 학생마다 1·2·3단계 권한을 켜고 끈다. 전체 관리자: 여기에 더해 선생님 지정·해제.
-  var adminFilter = 'wait', STAGES = [1, 2, 3];
+  var adminFilter = 'wait', campusFilter = '', STAGES = [1, 2, 3];
   function adminView() {
     window.cipPlayer.reset();
     var tabs = [['wait', '승인 대기'], ['ok', '수강생'], ['teacher', '선생님'], ['all', '전체']];
+    var mine = me.admin ? CAMPUSES : me.campuses;
+    if (mine.indexOf(campusFilter) < 0) campusFilter = '';
     view.innerHTML = bar('회원 관리') + '<main class="index admin"><div class="card wide"><h2>회원 관리</h2>'
-      + '<p class="msg">' + (me.admin ? '전체 관리자' : '선생님') + ' 계정입니다. 학생 줄의 단계 단추를 누르면 그 단계가 열리거나 닫힙니다.'
-      + (me.admin ? ' 선생님은 먼저 회원가입을 한 뒤, 여기서 ‘선생님 지정’을 누르면 됩니다.' : '') + '</p>'
+      + '<p class="msg">' + (me.admin ? '<b>전체 관리자</b> 계정입니다. 모든 캠퍼스의 회원을 관리합니다. 선생님은 먼저 회원가입을 한 뒤, 여기서 ‘선생님 지정’을 누르고 담당 캠퍼스를 고르면 됩니다.'
+        : mine.length ? '<b>' + esc(mine.join(' · ')) + '</b> 캠퍼스 담당 선생님입니다. 담당 캠퍼스의 학생만 보이고 관리할 수 있습니다.'
+        : '<b>담당 캠퍼스가 아직 지정되지 않았습니다.</b> 전체 관리자에게 캠퍼스 지정을 요청해 주세요.')
+      + ' 학생 줄의 단계 단추를 누르면 그 단계가 열리거나 닫힙니다.</p>'
+      + (mine.length > 1 ? '<div class="cfilter"><span>캠퍼스</span>' + [''].concat(mine).map(function (c) {
+          return '<button type="button" data-cfilter="' + esc(c) + '"' + (c === campusFilter ? ' class="on"' : '') + '>' + (c ? esc(c) : '전체') + '</button>';
+        }).join('') + '</div>' : '')
       + '<div class="tabs">' + tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '">' + t[1] + '</button>'; }).join('')
       + '</div><div class="list"><p class="msg">불러오는 중…</p></div></div></main>';
     view.dataset.path = 'admin';
@@ -211,6 +226,7 @@
     if (adminFilter === 'wait') q = q.eq('role', 'student').eq('stages', '{}');
     if (adminFilter === 'ok') q = q.eq('role', 'student').neq('stages', '{}');
     if (adminFilter === 'teacher') q = q.eq('role', 'teacher');
+    if (campusFilter) q = q.contains('campuses', [campusFilter]);
     q.then(function (r) {
       var box = view.querySelector('.list');
       if (r.error) { box.innerHTML = '<p class="note err">' + esc(r.error.message) + '</p>'; return; }
@@ -227,16 +243,27 @@
       ctl = '<span class="badge">전체 관리자</span>';
     } else if (p.role === 'teacher') {
       ctl = '<span class="badge">선생님 · 전 단계</span>'
-        + (me.admin ? '<button class="btn ghost sm" type="button" data-role="student" data-id="' + p.id + '">선생님 해제</button>' : '');
+        + (me.admin ? '<div class="stg camp">' + CAMPUSES.map(function (c) {      // 담당 캠퍼스: 여러 곳
+            var on = p.campuses.indexOf(c) >= 0;
+            return '<button type="button" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '" data-tcampus="' + esc(c) + '" data-id="' + p.id
+              + '" data-cur="' + esc(p.campuses.join(',')) + '">' + esc(c) + '</button>';
+          }).join('') + '</div>'
+          + '<button class="lnk" type="button" data-role="student" data-id="' + p.id + '" data-cur="' + esc(p.campuses.join(',')) + '">선생님 해제</button>'
+          : '');
     } else {
       ctl = '<div class="stg">' + STAGES.map(function (n) {
         var on = p.stages.indexOf(n) >= 0;
         return '<button type="button" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '" data-stage="' + n + '" data-id="' + p.id
           + '" data-cur="' + p.stages.join(',') + '">' + n + '단계</button>';
       }).join('') + '</div>'
-        + (me.admin ? '<button class="lnk" type="button" data-role="teacher" data-id="' + p.id + '">선생님 지정</button>' : '');
+        + '<div class="mrow"><label class="cmp">캠퍼스 <select data-scampus data-id="' + p.id + '" data-cur="' + esc(p.campuses[0] || '') + '">'
+        + (p.campuses.length ? '' : '<option value="" selected>미지정</option>')
+        + CAMPUSES.map(function (c) { return '<option' + (p.campuses[0] === c ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('')
+        + '</select></label>'
+        + (me.admin ? '<button class="lnk" type="button" data-role="teacher" data-id="' + p.id + '">선생님 지정</button>' : '') + '</div>';
     }
     return '<div class="mem"><div class="info"><b>' + esc(p.name || '(이름 없음)') + '</b>'
+      + (p.role !== 'admin' ? '<span class="cbadge' + (p.campuses.length ? '' : ' none') + '">' + esc(campusTxt(p.campuses)) + '</span>' : '')
       + '<span>' + esc(p.email) + '</span>' + (p.note ? '<span class="memo">' + esc(p.note) + '</span>' : '')
       + '<small>가입 ' + d + '</small></div><div class="ctl">' + ctl + '</div></div>';
   }
@@ -245,9 +272,23 @@
   function saveMember(btn, patch, confirmMsg) {
     if (confirmMsg && !confirm(confirmMsg)) return;
     btn.disabled = true;
-    sb.from('profiles').update(patch).eq('id', btn.dataset.id).select().then(function (r) {
-      if (r.error || !r.data.length) { alert('바꾸지 못했습니다' + (r.error ? ': ' + r.error.message : '')); btn.disabled = false; return; }
-      var p = r.data[0], row = btn.closest('.mem');
+    // 저장과 다시 읽기를 나눈다: 담당 밖 캠퍼스로 옮기면 저장 결과를 돌려받을 권한이 없어(RETURNING에도 조회 규칙 적용) 한 번에 하면 거절된다.
+    var id = btn.dataset.id, row = btn.closest('.mem');
+    var write = btn.matches('[data-scampus]')        // 학생 캠퍼스 이동은 서버 함수로
+      ? sb.rpc('move_student_campus', { target: id, campus: patch.campuses[0] })
+      : sb.from('profiles').update(patch).eq('id', id);
+    write.then(function (u) {
+      if (u.error) return u;
+      return sb.from('profiles').select('*').eq('id', id);
+    }).then(function (r) {
+      if (r.error) { alert('바꾸지 못했습니다: ' + r.error.message); btn.disabled = false; if (btn.dataset.cur != null && btn.tagName === 'SELECT') btn.value = btn.dataset.cur; return; }
+      if (!r.data.length) {   // 담당 밖 캠퍼스로 옮겨져 이제 볼 수 없음
+        row.classList.add('moved');
+        row.querySelector('.ctl').innerHTML = '<span class="badge out">' + esc(patch.campuses && patch.campuses[0] || '') + ' 캠퍼스로 이동됨</span>';
+        return;
+      }
+      var p = r.data[0];
+      if (campusFilter && p.campuses.indexOf(campusFilter) < 0) { row.outerHTML = memberRow(p).replace('class="mem"', 'class="mem moved"'); return; }
       var keep = adminFilter === 'all'
         || (adminFilter === 'teacher' && p.role === 'teacher')
         || (adminFilter === 'wait' && p.role === 'student' && !p.stages.length)
@@ -255,6 +296,20 @@
       if (keep) row.outerHTML = memberRow(p);
       else { row.outerHTML = memberRow(p).replace('class="mem"', 'class="mem moved"'); }
     });
+  }
+
+  function changeCampus(sel) {
+    var to = sel.value, from = sel.dataset.cur;
+    if (!to || to === from) return;
+    var away = !me.admin && me.campuses.indexOf(to) < 0;
+    var msg = (from ? from + ' → ' : '') + to + ' 캠퍼스로 옮길까요?' + (away ? '\n옮기면 담당 캠퍼스가 아니어서 더 이상 이 학생을 관리할 수 없습니다.' : '');
+    if (!confirm(msg)) { sel.value = from; return; }
+    saveMember(sel, { campuses: [to] });
+  }
+
+  function toggleTeacherCampus(btn) {
+    var cur = btn.dataset.cur ? btn.dataset.cur.split(',') : [], c = btn.dataset.tcampus;
+    saveMember(btn, { campuses: cur.indexOf(c) >= 0 ? cur.filter(function (x) { return x !== c; }) : cur.concat(c) });
   }
 
   function toggleStage(btn) {
@@ -270,7 +325,7 @@
       sb.rpc('is_admin')
     ]).then(function (r) {
       var p = r[0].data || {}, admin = r[1].data === true;
-      me = { user: user, profile: p, admin: admin, teacher: admin || p.role === 'teacher', stages: p.stages || [] };
+      me = { user: user, profile: p, admin: admin, teacher: admin || p.role === 'teacher', stages: p.stages || [], campuses: p.campuses || [] };
     });
   }
 
@@ -305,15 +360,19 @@
   });
 
   view.addEventListener('submit', function (ev) { ev.preventDefault(); submit(ev.target); });
+  view.addEventListener('change', function (ev) { if (ev.target.matches('[data-scampus]')) changeCampus(ev.target); });
   view.addEventListener('click', function (ev) {
-    var t = ev.target.closest('[data-mode],[data-act],[data-filter],[data-stage],[data-role],a[href]');
+    var t = ev.target.closest('[data-mode],[data-act],[data-filter],[data-cfilter],[data-stage],[data-tcampus],[data-role],a[href]');
     if (!t) return;
     if (t.dataset.mode) return authView(t.dataset.mode);
     if (t.dataset.filter) { adminFilter = t.dataset.filter; return adminView(); }
+    if (t.dataset.cfilter != null) { campusFilter = t.dataset.cfilter; return adminView(); }
     if (t.dataset.stage) return toggleStage(t);
-    if (t.dataset.role) return saveMember(t, { role: t.dataset.role }, t.dataset.role === 'teacher'
-      ? '이 회원을 선생님으로 지정할까요? 모든 단계를 볼 수 있고, 학생에게 단계 권한을 줄 수 있게 됩니다.'
-      : '선생님 권한을 해제할까요? 학생 계정으로 돌아가며, 볼 수 있는 단계는 따로 열어 주어야 합니다.');
+    if (t.dataset.tcampus) return toggleTeacherCampus(t);
+    if (t.dataset.role === 'teacher') return saveMember(t, { role: 'teacher' },
+      '이 회원을 선생님으로 지정할까요? 모든 단계를 볼 수 있고, 담당 캠퍼스 학생에게 단계 권한을 줄 수 있게 됩니다.\n(지금 캠퍼스가 담당 캠퍼스로 지정되며, 나중에 바꿀 수 있습니다)');
+    if (t.dataset.role === 'student') return saveMember(t, { role: 'student', campuses: (t.dataset.cur || '').split(',').filter(Boolean).slice(0, 1) },
+      '선생님 권한을 해제할까요? 학생 계정으로 돌아가며(캠퍼스는 한 곳만 남습니다), 볼 수 있는 단계는 따로 열어 주어야 합니다.');
     if (t.dataset.act === 'logout') return sb.auth.signOut();
     if (t.dataset.act === 'recheck') { view.dataset.path = ''; return loadMe(me.user).then(route); }
     var href = t.getAttribute('href');

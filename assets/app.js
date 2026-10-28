@@ -30,7 +30,7 @@
   // #/ → index.html, #/s1/ → s1/index.html, #/s1/u03 → s1/u03.html
   function routePath() {
     var h = location.hash.replace(/^#\/?/, '');
-    if (h === 'admin') return 'admin';
+    if (h === 'admin' || h === 'me') return h;
     if (!h || /\/$/.test(h)) return h + 'index.html';
     return h + '.html';
   }
@@ -107,7 +107,7 @@
     if (!top || top.querySelector('.who')) return;
     var who = document.createElement('div');
     who.className = 'who';
-    who.innerHTML = '<span class="nm">' + esc(me.profile && me.profile.name || me.user.email) + '</span>'
+    who.innerHTML = '<a class="nm" href="#/me" title="내 정보 · 캠퍼스 변경">' + esc(me.profile && me.profile.name || me.user.email) + '</a>'
       + (me.teacher ? '<a href="#/admin">회원 관리</a>' : '')
       + '<button type="button" data-act="logout">로그아웃</button>';
     top.appendChild(who);
@@ -197,7 +197,47 @@
       + '<p class="msg"><b>' + esc(me.user.email) + '</b> 계정으로 <b>' + esc(campusTxt(me.campuses)) + '</b> 캠퍼스에 가입 신청이 접수되었습니다.<br>'
       + '담당 선생님이 볼 수 있는 단계를 열어 주면 교재가 열립니다. 연락을 받으면 ‘승인 확인’을 눌러 주세요.</p>'
       + '<p class="row"><button class="btn" type="button" data-act="recheck">승인 확인</button>'
+      + '<a class="btn ghost" href="#/me">캠퍼스 변경</a>'
       + '<button class="btn ghost" type="button" data-act="logout">로그아웃</button></p></div></div>';
+  }
+
+  // ---------------------------------------------------------------- 내 정보 (본인 캠퍼스 변경)
+  function meView() {
+    window.cipPlayer.reset();
+    view.dataset.path = 'me';
+    var role = me.admin ? '전체 관리자' : me.teacher ? '선생님' : '학생';
+    var multi = me.profile.role === 'teacher';
+    var pick = me.admin ? '<p class="msg">전체 관리자는 모든 캠퍼스를 관리하므로 캠퍼스를 따로 고르지 않습니다.</p>'
+      : '<form data-form="campus"><fieldset class="pick"><legend>' + (multi ? '담당 캠퍼스 <small>여러 곳 고를 수 있습니다</small>' : '소속 캠퍼스') + '</legend>'
+        + CAMPUSES.map(function (c) {
+          return '<label><input type="' + (multi ? 'checkbox' : 'radio') + '" name="campus" value="' + esc(c) + '"'
+            + (me.campuses.indexOf(c) >= 0 ? ' checked' : '') + '><span>' + esc(c) + '</span></label>';
+        }).join('') + '</fieldset>'
+        + '<p class="msg sm">' + (multi ? '담당 캠퍼스의 학생만 보이고 관리할 수 있습니다.'
+          : '캠퍼스를 옮기면 새 캠퍼스 선생님이 관리합니다. 열람 중인 단계는 그대로 유지됩니다.') + '</p>'
+        + '<button class="btn" type="submit">저장</button><p class="note" role="status"></p></form>';
+    view.innerHTML = bar('내 정보') + '<div class="gate"><div class="card"><h2>내 정보</h2>'
+      + '<dl class="kv"><dt>이름</dt><dd>' + esc(me.profile.name || '-') + '</dd><dt>이메일</dt><dd>' + esc(me.user.email) + '</dd>'
+      + '<dt>등급</dt><dd>' + role + '</dd>'
+      + (me.teacher ? '' : '<dt>열람 단계</dt><dd>' + (me.stages.length ? me.stages.map(function (n) { return n + '단계'; }).join(', ') : '승인 대기') + '</dd>')
+      + '<dt>캠퍼스</dt><dd class="cur">' + esc(me.admin ? '전체' : campusTxt(me.campuses)) + '</dd></dl>'
+      + pick + '<p class="row back"><a class="lnk" href="#/">← 처음으로</a></p></div></div>';
+    addUserMenu();
+    document.title = '내 정보 · SPEEDY CIP';
+  }
+
+  function saveCampus(form) {
+    var picked = [].map.call(form.querySelectorAll('input[name=campus]:checked'), function (i) { return i.value; });
+    var out = form.querySelector('.note'), btn = form.querySelector('button[type=submit]');
+    if (!picked.length) { out.textContent = '캠퍼스를 한 곳 이상 골라 주세요.'; out.className = 'note err'; return; }
+    btn.disabled = true;
+    sb.rpc('set_my_campuses', { campuses: picked }).then(function (r) {
+      btn.disabled = false;
+      if (r.error) { out.textContent = '바꾸지 못했습니다: ' + r.error.message; out.className = 'note err'; return; }
+      me.campuses = r.data; me.profile.campuses = r.data;
+      view.querySelector('.kv .cur').textContent = campusTxt(r.data);
+      out.textContent = campusTxt(r.data) + ' 캠퍼스로 저장했습니다.'; out.className = 'note ok';
+    });
   }
 
   // ---------------------------------------------------------------- 회원 관리 (선생님·전체 관리자)
@@ -331,8 +371,9 @@
 
   function route() {
     if (!me) return authView();
-    if (!me.teacher && !me.stages.length) return pendingView();
     var path = routePath();
+    if (path === 'me') return meView();
+    if (!me.teacher && !me.stages.length) return pendingView();
     if (path === 'admin') return me.teacher ? adminView() : (location.hash = '#/');
     var st = +(path.match(/^s(\d)\//) || [])[1];
     if (st && !me.teacher && me.stages.indexOf(st) < 0) return lockedView(st);
@@ -359,7 +400,11 @@
     route();
   });
 
-  view.addEventListener('submit', function (ev) { ev.preventDefault(); submit(ev.target); });
+  view.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (ev.target.dataset.form === 'campus') return saveCampus(ev.target);
+    submit(ev.target);
+  });
   view.addEventListener('change', function (ev) { if (ev.target.matches('[data-scampus]')) changeCampus(ev.target); });
   view.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-mode],[data-act],[data-filter],[data-cfilter],[data-stage],[data-tcampus],[data-role],a[href]');

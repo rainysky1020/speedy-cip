@@ -69,6 +69,15 @@
   background: #fff; color: #6b6360; border: 1px solid var(--line); }
 .cfilter button.on { background: var(--charcoal); color: #fff; border-color: var(--charcoal); }
 
+/* 내 정보 */
+.kv { display: grid; grid-template-columns: 5.5em 1fr; gap: 8px 12px; margin: 4px 0 18px; font-size: 14px; }
+.kv dt { color: #8b8380; font-weight: 700; }
+.kv dd { margin: 0; color: var(--charcoal); overflow-wrap: anywhere; }
+.card .msg.sm { font-size: 13px; margin: 0; color: #6b6360; }
+.pick legend small { font-weight: 400; color: #8b8380; margin-left: 4px; }
+.row.back { margin-top: 14px; }
+.top .who a.nm { color: #d9d2ce; text-decoration: underline; text-decoration-color: rgba(255,255,255,.3); text-underline-offset: 3px; }
+
 /* 가입: 캠퍼스 고르기 */
 .pick { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .pick legend { font-size: 13px; font-weight: 700; color: var(--charcoal); margin-bottom: 6px; padding: 0; }
@@ -86,7 +95,8 @@
   color: #fff; background: var(--charcoal); border-radius: 999px; padding: 4px 10px; }
 
 @media (max-width: 640px) {
-  .top .who .nm { display: none; }
+  .top .who .nm { max-width: 5em; }
+  .top .who { gap: 10px; }
   .gate { margin-top: 14px; }
   .mem { flex-wrap: wrap; }
   .stages a.stage .lock { top: 50%; margin-top: -11px; }

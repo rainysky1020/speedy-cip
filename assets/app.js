@@ -114,8 +114,11 @@
   }
 
   // ---------------------------------------------------------------- 로그인·가입
+  var flash = '';
   function authView(mode, note) {
     mode = mode || 'login';
+    var ok = !note && !!flash;
+    note = note || flash; flash = '';
     view.dataset.path = '';
     var f = {
       login: '<label>이메일<input name="email" type="email" autocomplete="email" required></label>'
@@ -143,7 +146,7 @@
       : '<div class="tabs"><button type="button" data-mode="login">← 로그인으로</button></div>';
     view.innerHTML = bar() + '<div class="gate"><div class="hero home"><div class="k">CHINESE · 중국어</div><h1>SPEEDY CIP</h1>'
       + '<p>교재를 보면서 원어민 음성을 듣는 회원 전용 웹 교재입니다.<br>가입 후 관리자 승인을 받으면 열람할 수 있습니다.</p></div>'
-      + '<div class="card">' + tabs + '<form data-form="' + mode + '">' + f + '<p class="note" role="status">' + (note || '') + '</p></form></div></div>';
+      + '<div class="card">' + tabs + '<form data-form="' + mode + '">' + f + '<p class="note' + (ok ? ' ok' : '') + '" role="status">' + (note || '') + '</p></form></div></div>';
   }
 
   function submit(form) {
@@ -221,9 +224,32 @@
       + '<dt>등급</dt><dd>' + role + '</dd>'
       + (me.teacher ? '' : '<dt>열람 단계</dt><dd>' + (me.stages.length ? me.stages.map(function (n) { return n + '단계'; }).join(', ') : '승인 대기') + '</dd>')
       + '<dt>캠퍼스</dt><dd class="cur">' + esc(me.admin ? '전체' : campusTxt(me.campuses)) + '</dd></dl>'
-      + pick + '<p class="row back"><a class="lnk" href="#/">← 처음으로</a></p></div></div>';
+      + pick + '<p class="row back"><a class="lnk" href="#/">← 처음으로</a></p></div>'
+      + (me.admin ? '' : '<details class="card leave"><summary>회원 탈퇴</summary>'
+        + '<form data-form="leave"><p class="msg sm">탈퇴하면 계정과 열람 권한이 바로 삭제되며 되돌릴 수 없습니다. '
+        + '같은 이메일로 다시 가입하면 새 회원으로 처음부터 승인을 받아야 합니다.</p>'
+        + '<label>비밀번호 확인<input name="pw" type="password" autocomplete="current-password" required></label>'
+        + '<button class="btn danger" type="submit">탈퇴하기</button><p class="note" role="status"></p></form></details>')
+      + '</div>';
     addUserMenu();
     document.title = '내 정보 · SPEEDY CIP';
+  }
+
+  // 탈퇴: 비밀번호를 한 번 더 확인한 뒤 delete_my_account (전체 관리자는 서버에서 거절)
+  function leave(form) {
+    var out = form.querySelector('.note'), btn = form.querySelector('button[type=submit]');
+    var say = function (t) { out.textContent = t; out.className = 'note err'; };
+    if (!confirm('정말 탈퇴할까요? 계정과 열람 권한이 모두 삭제됩니다.')) return;
+    btn.disabled = true;
+    sb.auth.signInWithPassword({ email: me.user.email, password: form.elements.pw.value }).then(function (r) {
+      if (r.error) { btn.disabled = false; return say('비밀번호가 맞지 않습니다.'); }
+      return sb.rpc('delete_my_account').then(function (d) {
+        if (d.error) { btn.disabled = false; return say('탈퇴하지 못했습니다: ' + d.error.message); }
+        flash = '탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.';   // 로그아웃 뒤 로그인 화면에 표시
+        location.hash = '#/';
+        return sb.auth.signOut({ scope: 'local' });
+      });
+    });
   }
 
   function saveCampus(form) {
@@ -403,6 +429,7 @@
   view.addEventListener('submit', function (ev) {
     ev.preventDefault();
     if (ev.target.dataset.form === 'campus') return saveCampus(ev.target);
+    if (ev.target.dataset.form === 'leave') return leave(ev.target);
     submit(ev.target);
   });
   view.addEventListener('change', function (ev) { if (ev.target.matches('[data-scampus]')) changeCampus(ev.target); });

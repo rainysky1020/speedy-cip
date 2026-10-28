@@ -1,0 +1,52 @@
+/* 회원판 화면: 로그인·가입, 승인 대기, 회원 관리 */
+.gate { max-width: 460px; margin: 24px auto; padding: 0 var(--sp); display: grid; gap: 18px; }
+.gate .hero p { font-size: 14px; }
+.card { background: var(--card); border-radius: 16px; padding: 22px 22px 18px; box-shadow: 0 2px 14px rgba(80, 40, 20, .06);
+  font-family: var(--ko-sans); }
+.card h2 { margin: 0 0 10px; font-size: 20px; font-weight: 800; color: var(--charcoal); }
+.card p { text-align: left; }
+.card .msg { margin: 0 0 14px; line-height: 1.7; color: #4a4340; font-size: 14px; }
+.card form { display: grid; gap: 12px; }
+.card label { display: grid; gap: 6px; font-size: 13px; font-weight: 700; color: var(--charcoal); }
+.card label small { font-weight: 400; color: #8b8380; }
+.card input { font: inherit; font-size: 16px; font-weight: 400; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.card input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+
+.btn { font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; border: 0; border-radius: 10px; padding: 12px 18px;
+  background: var(--accent); color: #fff; text-decoration: none; display: inline-block; text-align: center; }
+.btn:hover { background: var(--accent-dk); }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.ghost { background: #fff; color: var(--accent-dk); box-shadow: inset 0 0 0 1px var(--accent-soft); }
+.btn.ghost:hover { background: var(--accent-tint); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; }
+
+.tabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+.tabs button { font: inherit; font-size: 15px; font-weight: 700; color: #8b8380; background: none; border: 0; cursor: pointer;
+  padding: 8px 12px 10px; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.tabs button.on { color: var(--accent-dk); border-bottom-color: var(--accent); }
+.lnk { font: inherit; font-size: 13px; color: #6b6360; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+.alt { margin: 0; text-align: right; }
+.note { margin: 0; font-size: 13.5px; line-height: 1.6; min-height: 1em; }
+.note.ok { color: #2e7d4f; }
+.note.err { color: #c0392b; }
+
+/* 머리띠 오른쪽: 사용자 */
+.top .who { margin-left: auto; display: flex; align-items: center; gap: 12px; font-family: var(--ko-sans); font-size: 13px; white-space: nowrap; }
+.top .who .nm { color: #d9d2ce; max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
+.top .who a, .top .who button { color: #fff; text-decoration: none; font: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+.top .who a:hover, .top .who button:hover { color: var(--accent); }
+
+/* 회원 관리 */
+.admin .card.wide { max-width: 760px; margin: 0 auto; }
+.mem { display: flex; align-items: center; gap: 14px; padding: 14px 2px; border-bottom: 1px solid var(--line); }
+.mem:last-child { border-bottom: 0; }
+.mem .info { flex: 1; min-width: 0; display: grid; gap: 2px; font-size: 14px; }
+.mem .info span { color: #4a4340; overflow-wrap: anywhere; }
+.mem .info .memo { color: var(--accent-dk); }
+.mem .info small { color: #8b8380; font-size: 12px; }
+.mem .btn { flex: none; padding: 9px 16px; font-size: 14px; }
+
+@media (max-width: 640px) {
+  .top .who .nm { display: none; }
+  .gate { margin-top: 14px; }
+}

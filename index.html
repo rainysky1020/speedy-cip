@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SPEEDY CIP</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=Noto+Serif+SC:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/book.css">
+<link rel="stylesheet" href="assets/web.css">
+<link rel="stylesheet" href="assets/app.css">
+</head><body>
+<div id="view"><div class="gate"><p class="msg">불러오는 중…</p></div></div>
+<div id="player" hidden><button id="pl-toggle" type="button" aria-label="재생/일시정지">❚❚</button>
+<div class="pl-info"><div id="pl-label"></div><div class="pl-bar"><i id="pl-prog"></i></div></div>
+<button id="pl-rate" type="button" title="재생 속도">1.0×</button>
+<button id="pl-loop" type="button" title="구간 반복">반복</button>
+<button id="pl-close" type="button" aria-label="닫기">✕</button></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="assets/player.js"></script>
+<script src="assets/app.js"></script>
+</body></html>

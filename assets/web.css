@@ -167,7 +167,10 @@ main.index { max-width: 760px; margin: 0 auto; padding: 22px var(--sp) 10px; }
 }
 
 /* 교체 연습: 문장별 번호 단추 */
-.sents { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -1mm 0 5mm 9mm; }
+.sents { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 3mm 0 7mm 9mm; }
+/* 교재 쪽 끝 묶음은 아래 여백이 0이라 ‘이어 듣기’ 줄이 상자에 붙는다 → 웹에서는 여백을 한 곳(.sents)에서만 준다 */
+main.book .subst { margin-bottom: 0 !important; }
+main.book .subst + .sents:last-child, main.book section.page > .sents:last-child { margin-bottom: 2mm; }
 .sents button.pa { margin-right: 4px; }
 button.sn {
   width: 30px; height: 30px; border-radius: 50%; cursor: pointer; padding: 0;
@@ -181,3 +184,123 @@ button.sn.playing { background: var(--accent); border-color: var(--accent); colo
 .au-s { text-decoration: underline dotted var(--accent); text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
 td.au-s { border-radius: 4px; }
 .big .au-s { padding: 0 3px; }
+
+
+/* ================= 연습문제 풀이 ================= */
+.qz-opts { display: inline-flex; flex-wrap: wrap; gap: 6px; vertical-align: middle; margin-left: 4px; }
+button.qz-opt {
+  min-width: 34px; height: 32px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+  font: 600 14px/1 var(--latin), var(--ko-sans); color: var(--charcoal);
+  background: #fff; border: 1.5px solid var(--line); transition: background .12s, border-color .12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.qz-opts.py button.qz-opt, .py .qz-opts button.qz-opt { font-family: var(--latin); font-weight: 500; }
+button.qz-opt:hover { border-color: var(--accent-soft); background: var(--accent-tint); }
+button.qz-opt.on { background: var(--charcoal); border-color: var(--charcoal); color: #fff; }
+.qz-opts.ox button.qz-opt { min-width: 40px; font-size: 16px; }
+.items .leader .qz-opts.ox { margin-left: 8px; }
+main.book .items:has(.qz-item) { width: auto !important; column-gap: 6mm; row-gap: 2.5mm !important; }
+.items > .qz-item:not(.leader) { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 0; }
+main.book .items.qz-pair { grid-template-columns: max-content 1fr; align-items: center; column-gap: 3mm; }
+.items.qz-pair > .qz-item button.pa { margin-left: 6px; }
+button.qz-opt.pic { min-width: 32px; width: 32px; padding: 0; font-size: 17px; }
+.qz-figs .qz-pic { cursor: pointer; border-radius: 8px; outline: 2px solid transparent; outline-offset: 3px; transition: outline-color .12s; }
+.qz-figs button.qz-opt.on + .qz-pic, .qz-figs button.qz-opt.on + span .qz-pic { outline-color: var(--charcoal); }
+
+.qz-tones { display: inline-flex; gap: 4px; margin-left: 4px; }
+button.qz-syl {
+  min-width: 44px; height: 34px; padding: 0 8px; cursor: pointer; border-radius: 8px;
+  font: 500 17px/1 var(--latin); color: var(--charcoal); background: #fff; border: 1.5px dashed var(--accent-soft);
+}
+button.qz-syl[data-t] { border-style: solid; border-color: var(--charcoal); }
+
+/* 작문 입력칸 */
+.arrow-line:has(.qz-in), .arrow-line:has(.qz-line) { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+input.qz-in {
+  flex: 1; min-width: 0; max-width: 125mm; height: 40px; padding: 0 12px; border-radius: 10px;
+  font: 17px var(--zh-serif, 'Noto Serif SC'), var(--ko-sans); color: var(--charcoal);
+  background: #fffdfb; border: 1.5px solid var(--line); outline: 0;
+}
+input.qz-in::placeholder { font: 14px var(--ko-sans); color: #b9aea9; }
+input.qz-in:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+
+/* 낱말 조각 */
+.qz-bank { display: inline-flex; flex-wrap: wrap; gap: 6px; vertical-align: middle; min-height: 38px; }
+.qz-line {
+  flex: 1; max-width: 125mm; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  min-height: 46px; padding: 5px 8px; border-radius: 12px; background: #fffdfb; border: 1.5px dashed var(--accent-soft);
+}
+.qz-line:empty::before { content: attr(data-ph); font: 13px var(--ko-sans); color: #b9aea9; }
+button.qz-tile {
+  height: 34px; padding: 0 12px; border-radius: 8px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+  font: 600 17px/1 var(--zh-serif, 'Noto Serif SC'), serif; color: var(--charcoal);
+  background: #fff; border: 1px solid var(--accent-soft); box-shadow: 0 2px 0 var(--accent-soft);
+}
+.qz-line button.qz-tile { background: var(--accent-tint); }
+button.qz-tile.qz-hole { opacity: .25; }
+.qz-ghost { position: fixed; left: 0; top: 0; z-index: 80; pointer-events: none; cursor: grabbing;
+  box-shadow: 0 8px 18px rgba(80, 40, 20, .25) !important; }
+.qz-end { font-size: 17px; }
+
+/* 말하기 모범 답안 */
+.qz-say { display: none; }
+.blank.qz-shown { border-bottom-color: var(--accent); height: auto; min-height: 1.2em; line-height: 1.45; vertical-align: baseline; padding: 0 4px 1px; background: var(--accent-tint); border-radius: 4px 4px 0 0; }
+.blank.qz-shown .qz-say { display: inline; color: var(--accent-dk); font-weight: 600; padding: 0 2px; }
+.blank.qz-shown + .qz-punct { display: none; }
+.blank:has(.qz-say) { white-space: normal; }
+
+/* 채점 */
+.qz-ok, .qz-no { position: relative; }
+.qz-item.qz-ok > .qz-in, .qz-item.qz-ok > .qz-line { border-color: #2f9e6b; border-style: solid; background: #eefaf3; }
+.qz-item.qz-no > .qz-in, .qz-item.qz-no > .qz-line { border-color: #d6493a; border-style: solid; background: #fdf0ee; }
+.qz-item.qz-ok::after, .qz-item.qz-no::after {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; margin-left: 8px; vertical-align: middle;
+  font: 800 15px/1 var(--latin); color: #fff;
+}
+.qz-item.qz-ok::after { content: "○"; background: #2f9e6b; }
+.qz-item.qz-no::after { content: "✕"; background: #d6493a; }
+.arrow-line.qz-item::after { flex: none; order: 1; }
+.arrow-line .qz-fix { order: 2; }
+button.qz-opt.right { box-shadow: 0 0 0 3px #2f9e6b; }
+.qz-no button.qz-opt.on:not(.right) { background: #d6493a; border-color: #d6493a; }
+.qz-ok button.qz-opt.on { background: #2f9e6b; border-color: #2f9e6b; }
+.qz-fix {
+  display: block; flex-basis: 100%; margin: 4px 0 0 18px; font: 600 15px var(--zh-serif, 'Noto Serif SC'), var(--ko-sans); color: #2f7a55;
+}
+.qz-fix::before { content: "정답 "; font: 700 12px var(--ko-sans); color: #fff; background: #2f9e6b; border-radius: 4px; padding: 2px 6px; margin-right: 6px; vertical-align: 2px; }
+.items .qz-fix { margin-left: 30px; }
+
+.qz-foot {
+  display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 10px;
+  margin: 4mm 0 6mm; padding: 10px 12px; border-radius: 12px; background: var(--accent-tint); font-family: var(--ko-sans);
+}
+.qz-prog { margin-right: auto; font-size: 13.5px; font-weight: 700; color: var(--muted); }
+.qz-foot.done .qz-prog { font-size: 15px; color: var(--charcoal); }
+.qz-foot[data-score="all"] { background: #e6f6ed; }
+.qz-foot[data-score="all"] .qz-prog { color: #23784f; }
+.qz-foot.say .qz-prog::before { content: "말하기는 직접 소리 내어 답해 본 뒤 모범 답안과 비교해 보세요."; font-weight: 500; }
+.qz-foot button {
+  height: 36px; padding: 0 16px; border-radius: 999px; cursor: pointer; border: 0;
+  font: 700 14px var(--ko-sans); color: #fff; background: var(--accent);
+}
+.qz-foot button:disabled { background: #d9cfca; cursor: default; }
+.qz-foot button.qz-reset { background: #fff; color: var(--charcoal); border: 1px solid var(--line); }
+.qz-foot button[hidden] { display: none; }
+
+@media (max-width: 640px) {
+  .items:has(.qz-item) { width: auto !important; grid-template-columns: 1fr !important; }
+  .qz-figs { flex-wrap: wrap; }
+  /* 그림 보기 셋: 휴대폰에서는 한 줄에 셋, 번호는 그림 위 */
+  main.book .qz-figs:has(> span > .qz-pic) { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 8px !important; }
+  main.book .qz-figs > span:has(> .qz-pic) { flex-direction: column; align-items: flex-start !important; gap: 4px !important; }
+  main.book .qz-figs:not(.figrow) { grid-template-columns: 34px 1fr 34px 1fr 34px 1fr !important; column-gap: 4px !important; }
+  main.book .qz-figs .qz-pic { width: 100% !important; height: auto !important; margin: 0 !important; }
+  main.book .qz-figs.figrow:not(:has(> span > .qz-pic)) { display: grid !important; grid-template-columns: 34px 1fr 34px 1fr; gap: 6px !important; align-items: start; }
+  main.book .qz-figs span.qz-pic { padding: 0 !important; }
+  main.book .qz-figs span.qz-pic img { width: 100% !important; height: auto !important; margin: 0 !important; }
+  input.qz-in, .qz-line { flex: 1 1 0; max-width: none; }
+  .qz-item.qz-ok::after, .qz-item.qz-no::after { margin-left: 2px; }
+  .arrow-line .qz-fix { margin-left: 14px; }
+  .pic-q:has(.blank) { grid-template-columns: 8mm 1fr !important; }
+  .pic-q:has(.blank) > :last-child { grid-column: 1 / -1; }
+}

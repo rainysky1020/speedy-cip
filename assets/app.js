@@ -93,6 +93,10 @@
         Object.keys(auds).forEach(function (p) {
           if (urlCache[p]) window.AUDIO_URLS[p.slice(6, -4)] = urlCache[p].url;
         });
+        // 휴대폰 그림 배치(figs.js): 그림이 다 들어온 뒤 크기를 재고 다시 놓는다
+        if (window.cipFigs) Promise.all([].map.call(view.querySelectorAll('img'), function (i) {
+          return i.complete ? 0 : new Promise(function (r) { i.onload = i.onerror = r; setTimeout(r, 5000); });
+        })).then(function () { window.cipFigs(view); });
       });
     }).catch(function (e) {
       console.error(e);

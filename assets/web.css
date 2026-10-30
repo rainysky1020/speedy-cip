@@ -304,3 +304,29 @@ button.qz-opt.right { box-shadow: 0 0 0 3px #2f9e6b; }
   .pic-q:has(.blank) { grid-template-columns: 8mm 1fr !important; }
   .pic-q:has(.blank) > :last-child { grid-column: 1 / -1; }
 }
+
+/* ================= 휴대폰 그림 배치 (figs.js) ================= */
+@media (max-width: 640px) {
+  main.book .qz-figs.mfig { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px 10px !important; align-items: start !important; width: auto !important; }
+  main.book .qz-figs.mfig.mfig-wide { grid-template-columns: minmax(0, 1fr) !important; }
+  .mfig-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+  .mfig-card > * { max-width: 100%; }
+  /* 카드에 바로 담긴 그림·칸만 카드 폭으로 (지도형 보기 안쪽의 작은 그림은 figs.js가 % 위치로 맞춘다) */
+  main.book .mfig-card > img.fig, main.book .mfig-card > .qz-pic, main.book .mfig-card > span, main.book .mfig-card > div { width: 100% !important; height: auto !important; margin: 0 !important; }
+  main.book .mfig-card > span img.fig, main.book .mfig-card > div:not(.qz-pic) img.fig { width: 100% !important; height: auto !important; margin: 0 !important; }
+  main.book .mfig-card > div.qz-pic { position: relative !important; }
+  main.book .mstack { grid-template-columns: minmax(0, 1fr) !important; row-gap: 6px !important; }
+  main.book .mstack > *, main.book .mstack > * > * { grid-column: auto !important; }
+  main.book .mstack > img.fig { width: min(100%, 300px) !important; height: auto !important; margin: 0 !important; }
+  /* 그림 두세 장이 나란한 칸: 폭을 나눠 갖는다 */
+  main.book .mstack > div:not(.mfluid):has(> img.fig) { display: flex !important; gap: 8px !important; max-width: 100%; }
+  main.book .mstack > div:not(.mfluid) > img.fig { flex: 1 1 0; min-width: 0; width: auto !important; max-width: 300px; height: auto !important; margin: 0 !important; }
+  main.book .mstack > .mfluid { width: min(100%, 340px) !important; height: auto !important; }
+  main.book .mstack > div:not(.mfluid):has(> img.fig) { width: auto !important; }
+  .mzoom { cursor: zoom-in; }
+  main.book img.fig:not(.qz-pic) { cursor: zoom-in; }
+}
+.mview { position: fixed; inset: 0; z-index: 100; background: rgba(20, 16, 14, .86); display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto; }
+.mview-in { background: #fff; border-radius: 12px; padding: 10px; max-width: 100%; max-height: 100%; overflow: auto; }
+.mview-in > img { display: block; }
+.mview-x { position: fixed; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: #fff; font-size: 18px; cursor: pointer; }

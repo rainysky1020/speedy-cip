@@ -108,3 +108,23 @@
   .stages a.stage .lock { top: 50%; margin-top: -11px; }
   .mem .ctl { width: 100%; flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: center; row-gap: 10px; }
 }
+/* 약관·개인정보 동의 */
+.agree { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fafbfb; }
+.card .agree label.chk { display: flex; align-items: flex-start; gap: 8px; font-weight: 400; font-size: 13.5px; cursor: pointer; }
+.card .agree label.chk input { width: 18px; height: 18px; margin: 1px 0 0; padding: 0; flex: none; accent-color: var(--accent); }
+.card .agree label.all { font-weight: 800; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.agree-item { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 4px 8px; }
+.agree-item details { font-size: 12.5px; }
+.agree-item summary { cursor: pointer; color: #6b6360; text-decoration: underline; list-style: none; }
+.agree-item summary::-webkit-details-marker { display: none; }
+.agree-item details[open] { flex-basis: 100%; }
+.agree-item details[open] summary { margin-bottom: 6px; }
+.doc { margin: 0; max-height: 200px; overflow: auto; padding: 10px 12px; background: #fff; border: 1px solid var(--line); border-radius: 8px;
+  font-size: 12.5px; line-height: 1.6; color: #4a4340; }
+.doc dt { font-weight: 700; color: var(--charcoal); margin-top: 6px; }
+.doc dt:first-child { margin-top: 0; }
+.doc dd { margin: 2px 0 0; }
+.doc.full { max-height: none; border: 0; padding: 0; font-size: 14px; }
+.doc.full dt { margin-top: 14px; }
+.legal { margin: -6px 0 0; text-align: center; font-size: 12.5px; color: #8b8380; }
+.legal a { color: #8b8380; }

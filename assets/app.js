@@ -16,6 +16,50 @@
   });
   function campusTxt(cs) { return cs && cs.length ? cs.join(' · ') : '캠퍼스 미지정'; }
 
+  // ---------------------------------------------------------------- 약관·개인정보 (가입 화면 동의 + #/terms, #/privacy 공개 쪽)
+  // 문구를 바꾸면 VER을 올린다. 가입할 때 동의한 판(VER)과 시각이 회원 정보(user metadata)에 남는다.
+  var DOC_VER = '2026-10-30';
+  var DOCS = {
+    terms: ['이용약관', [
+      ['제1조 (목적)', '이 약관은 SPEEDY CIP 웹 교재(이하 ‘서비스’)의 이용 조건과 절차를 정합니다.'],
+      ['제2조 (회원가입)', '가입을 신청한 뒤 담당 선생님의 승인을 받아야 교재를 볼 수 있습니다. 수강생이 아니거나 신청 내용이 사실과 다르면 승인하지 않을 수 있습니다.'],
+      ['제3조 (이용 범위)', '회원은 승인된 권의 교재를 본인의 학습 목적으로만 이용할 수 있습니다.'],
+      ['제4조 (금지 행위)', '교재의 글·그림·음원을 복제, 녹음, 캡처하여 다른 사람에게 배포하거나, 계정을 다른 사람과 함께 쓰는 행위를 금지합니다. 위반하면 열람 권한이 제한될 수 있습니다.'],
+      ['제5조 (저작권)', '교재와 음원의 저작권은 저작권자에게 있습니다.'],
+      ['제6조 (서비스 변경·중단)', '수강 종료, 시스템 점검 등의 사유로 열람 권한이나 서비스가 변경되거나 중단될 수 있습니다.'],
+      ['제7조 (탈퇴)', '회원은 ‘내 정보’에서 언제든지 탈퇴할 수 있으며, 탈퇴하면 계정 정보가 바로 삭제됩니다.'],
+      ['부칙', '이 약관은 2026년 10월 30일부터 적용합니다.']]],
+    privacy: ['개인정보 수집·이용 안내', [
+      ['수집 항목', '(필수) 이름, 이메일, 비밀번호, 캠퍼스 · (선택) 소속·메모 · (자동) 로그인 일시 등 접속 기록'],
+      ['이용 목적', '회원 확인과 로그인, 교재 열람 권한 관리(가입 승인, 캠퍼스별 관리), 비밀번호 재설정 등 안내 메일 발송'],
+      ['보유 기간', '회원 탈퇴 시까지. 탈퇴하면 바로 삭제합니다. 단, 법령에 따라 보관해야 하는 정보는 그 기간 동안 보관합니다.'],
+      ['열람 범위', '회원의 이름·이메일·캠퍼스·메모는 담당 캠퍼스 선생님과 전체 관리자만 볼 수 있습니다. 비밀번호는 암호화되어 누구도 볼 수 없습니다.'],
+      ['처리 위탁', 'Supabase Inc. — 회원 정보 저장과 로그인 처리 (저장 위치: 대한민국 서울)'],
+      ['동의 거부', '동의하지 않을 수 있습니다. 다만 동의하지 않으면 회원가입과 교재 이용이 불가능합니다.'],
+      ['문의', '개인정보 열람·정정·삭제 요청은 다니는 캠퍼스의 담당 선생님께 해 주세요. 탈퇴는 ‘내 정보’에서 직접 할 수 있습니다.']]]
+  };
+  function docHtml(k) {
+    return DOCS[k][1].map(function (s) { return '<dt>' + s[0] + '</dt><dd>' + s[1] + '</dd>'; }).join('');
+  }
+  function agreeBlock() {
+    var item = function (k, label) {
+      return '<div class="agree-item"><label class="chk"><input type="checkbox" name="agree_' + k + '" required>'
+        + '<span><b>[필수]</b> ' + label + '</span></label>'
+        + '<details><summary>보기</summary><dl class="doc">' + docHtml(k) + '</dl></details></div>';
+    };
+    return '<div class="agree"><label class="chk all"><input type="checkbox" data-agree-all><span>전체 동의</span></label>'
+      + item('terms', '이용약관에 동의합니다') + item('privacy', '개인정보 수집·이용에 동의합니다') + '</div>';
+  }
+  function docView(k) {
+    window.cipPlayer.reset();
+    view.dataset.path = k;
+    view.innerHTML = bar(DOCS[k][0]) + '<div class="gate"><div class="card"><h2>' + DOCS[k][0] + '</h2>'
+      + '<dl class="doc full">' + docHtml(k) + '</dl>'
+      + '<p class="row back"><a class="lnk" href="#/">← 처음으로</a></p></div></div>';
+    if (me) addUserMenu();
+    document.title = DOCS[k][0] + ' · SPEEDY CIP';
+  }
+
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -30,7 +74,7 @@
   // #/ → index.html, #/s1/ → s1/index.html, #/s1/u03 → s1/u03.html
   function routePath() {
     var h = location.hash.replace(/^#\/?/, '');
-    if (h === 'admin' || h === 'me') return h;
+    if (h === 'admin' || h === 'me' || h === 'terms' || h === 'privacy') return h;
     if (!h || /\/$/.test(h)) return h + 'index.html';
     return h + '.html';
   }
@@ -136,6 +180,7 @@
           return '<label><input type="radio" name="campus" value="' + esc(c) + '" required' + (i ? '' : '') + '><span>' + esc(c) + '</span></label>';
         }).join('') + '</fieldset>'
         + '<label>소속·메모 <small>선택 · 승인에 참고합니다</small><input name="note" maxlength="100" placeholder="예: 화목 저녁반"></label>'
+        + agreeBlock()
         + '<button class="btn" type="submit">가입 신청</button>',
       reset: '<p class="msg">가입한 이메일로 비밀번호 재설정 링크를 보내 드립니다.</p>'
         + '<label>이메일<input name="email" type="email" autocomplete="email" required></label>'
@@ -150,7 +195,8 @@
       : '<div class="tabs"><button type="button" data-mode="login">← 로그인으로</button></div>';
     view.innerHTML = bar() + '<div class="gate"><div class="hero home"><div class="k">CHINESE · 중국어</div><h1>SPEEDY CIP</h1>'
       + '<p>교재를 보면서 원어민 음성을 듣는 회원 전용 웹 교재입니다.<br>가입 후 관리자 승인을 받으면 열람할 수 있습니다.</p></div>'
-      + '<div class="card">' + tabs + '<form data-form="' + mode + '">' + f + '<p class="note' + (ok ? ' ok' : '') + '" role="status">' + (note || '') + '</p></form></div></div>';
+      + '<div class="card">' + tabs + '<form data-form="' + mode + '">' + f + '<p class="note' + (ok ? ' ok' : '') + '" role="status">' + (note || '') + '</p></form></div>'
+      + '<p class="legal"><a href="#/terms">이용약관</a> · <a href="#/privacy">개인정보 수집·이용 안내</a></p></div>';
   }
 
   function submit(form) {
@@ -168,7 +214,8 @@
     } else if (mode === 'signup') {
       p = sb.auth.signUp({
         email: v('email'), password: form.elements.pw.value,
-        options: { emailRedirectTo: here, data: { name: v('name'), note: v('note'), campus: (form.querySelector('input[name=campus]:checked') || {}).value } }
+        options: { emailRedirectTo: here, data: { name: v('name'), note: v('note'), campus: (form.querySelector('input[name=campus]:checked') || {}).value,
+          agreed: { terms: DOC_VER, privacy: DOC_VER, at: new Date().toISOString() } } }
       }).then(function (r) {
         if (r.error) return say(/registered|exists/i.test(r.error.message) ? '이미 가입된 이메일입니다. 로그인해 주세요.'
           : /password/i.test(r.error.message) ? '비밀번호가 너무 약합니다. 더 길게 정해 주세요.'
@@ -400,8 +447,9 @@
   }
 
   function route() {
-    if (!me) return authView();
     var path = routePath();
+    if (DOCS[path]) return docView(path);           // 약관은 로그인 없이도 볼 수 있다
+    if (!me) return authView();
     if (path === 'me') return meView();
     if (!me.teacher && !me.stages.length) return pendingView();
     if (path === 'admin') return me.teacher ? adminView() : (location.hash = '#/');
@@ -436,7 +484,14 @@
     if (ev.target.dataset.form === 'leave') return leave(ev.target);
     submit(ev.target);
   });
-  view.addEventListener('change', function (ev) { if (ev.target.matches('[data-scampus]')) changeCampus(ev.target); });
+  view.addEventListener('change', function (ev) {
+    if (ev.target.matches('[data-scampus]')) return changeCampus(ev.target);
+    var box = ev.target.closest('.agree');                 // 전체 동의 ↔ 항목 동의 맞추기
+    if (!box) return;
+    var items = box.querySelectorAll('.agree-item input'), all = box.querySelector('[data-agree-all]');
+    if (ev.target === all) items.forEach(function (i) { i.checked = all.checked; });
+    else all.checked = [].every.call(items, function (i) { return i.checked; });
+  });
   view.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-mode],[data-act],[data-filter],[data-cfilter],[data-stage],[data-tcampus],[data-role],a[href]');
     if (!t) return;
